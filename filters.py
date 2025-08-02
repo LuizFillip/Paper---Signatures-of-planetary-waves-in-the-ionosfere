@@ -1,7 +1,9 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Fri Aug  1 21:30:21 2025
+import core as c
+import pandas as pd
 
-@author: Luiz
-"""
-
+def filter_storms(df):
+    df.index = pd.to_datetime(df.index.date)
+    df_source = c.geo_index(eyear = 2023)
+    df['dst'] = df.index.map(df_source['dst'])
+    df['kp'] =  df.index.map(df_source['kp'])
+    return df.loc[df['kp'] <= 3] 
