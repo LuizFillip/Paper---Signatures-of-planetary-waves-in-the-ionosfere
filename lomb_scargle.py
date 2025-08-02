@@ -1,5 +1,6 @@
 from astropy.timeseries import LombScargle
 import numpy as np 
+import base as b 
 
 class Lomb_Scargle(object):
 
