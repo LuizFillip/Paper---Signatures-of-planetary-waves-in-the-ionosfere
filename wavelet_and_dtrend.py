@@ -2,7 +2,7 @@ import numpy as np
 import PlasmaBubbles as pb 
 import pandas as pd 
 import datetime as dt 
-from astropy.timeseries import LombScargle
+import os 
 import matplotlib.pyplot as plt
 import base as b 
 import spectral as sp
@@ -15,7 +15,7 @@ def reindex_data(df):
     return df.reindex(full_index)
 
 def iono_data(dn, days):
-    import os 
+    
     infile = 'spectral/data/Fortaleza/'
     
     out = []
