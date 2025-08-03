@@ -68,12 +68,6 @@ def plot_desviation_from_mean(ax, df, col):
     
     return fit
     
-    
-    
-    
-# import core as c 
-
-
 
 
 def plot_infos(df, ax, i):
@@ -139,9 +133,7 @@ def plot_time_start(years, days, col = 'start'):
         
         df = epbs_start_time(dn, days)
         
-        fit = plot_desviation_from_mean(
-            ax[i], df, col)
-        
+        fit = plot_desviation_from_mean(ax[i], df, col)
         
         df = df.copy().dropna()
         y = df[col].values
