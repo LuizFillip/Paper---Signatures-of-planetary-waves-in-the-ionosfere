@@ -16,9 +16,10 @@ def plot_wavelet_subplot(ax, doy, period, power, sig95):
         cmap = b.custom_cmap(), 
         extend = 'both',
         )
-    vals = power.values
+    
+    # vals = power.values
    
-    step = find_step(vals, vmin = 0.0, n = 4)
+    step = find_step(power, vmin = 0.0, n = 4)
     ticks = np.arange(0, power.max(), step)
     b.colorbar(
             cf, 
@@ -200,19 +201,44 @@ days = 365
 col = 'hF'
 col = 'start'
 years = np.arange(2013, 2023)
-years = [2015, 2021]
+years = [2013]
 
-func = pw.epbs_start_time
+dn = dt.datetime(2013, 1, 1) 
+df = pw.epbs_start_time(dn, days )
  
-# func =  pw.vertical_drift
+# col = 'vp'
+# df =  pw.vertical_drift(dn, days)
 
-# func = pw.heights_frequency
+col = 'hF'
+df = pw.heights_frequency(dn, days)
 
-fig = plot_all_years_wavelet(
-        func, 
-        col,
-        years, 
-        j1 = 2.3, #3.9, 
-        days = 365,
-        ncols = 2
-        )
+# fig = plot_all_years_wavelet(
+#         func, 
+#         col,
+#         years, 
+#         j1 = 2.3, #3.9, 
+#         days = 365,
+#         ncols = 1
+#         )
+
+fig, ax = plt.subplots(
+     figsize = (12, 8),
+     nrows = 2,
+     sharex = True, 
+     # sharey = True
+     )
+
+freq = '15D'
+
+df['mean'] = df[col].rolling(freq).mean()
+
+df[col] = df[col] - df['mean']
+
+sst = df[col].values 
+doy = df['doy'].values 
+
+ax[0].plot(doy, sst)
+
+sig95, power, doy, period = pw.Wavelet(sst, doy, j1 = 2.1)
+
+plot_wavelet_subplot(ax[-1], doy, period, power, sig95)
