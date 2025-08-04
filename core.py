@@ -6,62 +6,53 @@ import base as b
 import numpy as np 
 import pandas as pd
 
-def plot_all_years(df, col):
-    
-    sst = df[col].values 
-    time = df['doy'].values
-    
-    b.sci_format(fontsize = 18)
+def plot_wavelet_subplot(ax, doy, period, power, sig95):
 
-
-    fig, axs = plt.subplots(
-        dpi = 300,
-        nrows = 3,
-        ncols = 3,
-        sharex = True, 
-        sharey = True,
-        figsize = (16, 12)
+    cf = ax.contourf(
+        doy, 
+        period, 
+        power, 
+        levels = 30, 
+        cmap = b.custom_cmap(), 
+        extend = 'both',
         )
-
-
-    plt.subplots_adjust(wspace = 0.02)
-
-    idx = df.index
-    s = idx[0].date()
-    e = idx[-1].date()
-    
-    pw.plot_wavelet(ax, sst, time, j1 = j1)
-    
-    ax.set(
-        yticks = np.arange(2, 18, 2),
-        ylabel = '', 
-        xlabel = '', 
-        title = f'{s} - {e}'
-        )
-    
-    for line in [300, 340]:
-        
-        ax.axvline(
-            line, 
-            color = 'white', 
-            lw = 3
+    vals = power.values
+   
+    step = find_step(vals, vmin = 0.0, n = 4)
+    ticks = np.arange(0, power.max(), step)
+    b.colorbar(
+            cf, 
+            ax, 
+            ticks = ticks, 
+            label = 'PSD', 
+            height = "100%", 
+            width = "3%",
+            orientation = "vertical", 
+            anchor = (.05, 0., 1, 1), 
+            color = 'k'
             )
-    for ln in [3, 6, 9]:
-        ax.axhline(ln, color = 'white', 
-                   linestyle = '--')
-        
-    axs[2, 0].set(
-        xlabel = 'Doy', 
-        ylabel = 'Period (days)'
-        )
     
+   
     
-    fig.suptitle(
-        'EPBs start time', 
-        y = 1.03, 
-        fontsize = 30
-        )
+    ax.contour(
+        doy, period, 
+        sig95, [-99, 1], 
+        colors = 'k'
+               )
+    ax.set(
+        yticks = np.arange(2, max(period), 2), 
+        xticks = np.arange(0, 365, 50),
+           ylim = [2, max(period)]
+           )
     
+    # ax.text(
+    #     0.4, 0.5, 'No EPBs', 
+    #     color = 'w', 
+    #     transform = ax.transAxes
+    #     )
+    
+    return 
+
    
 def find_maximus(ds_total):
     res = [ds_total.power.sel(
@@ -70,20 +61,21 @@ def find_maximus(ds_total):
 
     return max(res)
 
- 
-# df =
-
-# df = 
-        
-def join_datasets(col, func, years, days, j1):
+  
+def join_datasets(col, func, years, days, j1, freq = '15D'):
     
     datasets = []
     
     for num, year in enumerate(years):
        
-        dn = dt.datetime(year, 8, 1) 
+        dn = dt.datetime(year, 1, 1) 
         df = func(dn, days)
         df = df.drop_duplicates(subset='doy')
+        
+        df['mean'] = df[col].rolling(freq).mean()
+        
+        df[col] = df[col] - df['mean']
+        
         sst = df[col].values 
         doy = df['doy'].values 
         
@@ -109,7 +101,7 @@ def join_datasets(col, func, years, days, j1):
 
         datasets.append(ds)
     
-    return xr.concat(datasets, dim='year')
+    return xr.concat(datasets, dim = 'year')
 
 def find_step(vals, vmin = 0.0, n = 5, order = 2):
     
@@ -117,119 +109,110 @@ def find_step(vals, vmin = 0.0, n = 5, order = 2):
     
     arr = arr[~np.isnan(arr)]
     
-    vmax = np.nanmax(arr)
+    interval_total = np.nanmax(arr) - vmin
+ 
+    return round(interval_total / n, order)
     
-    intervalo_total = vmax - vmin
-    passo = intervalo_total / n
-    
-    return round(passo, order)
-    
-   
-
-days = 620
-
-j1 = 2.1
-
-col = 'foF2'
-
-titles = {
-    'start': 'EPBs start time', 
-    'duration': 'EPBs night duration',
-    'time': 'PRE time', 
-    'vp': 'PRE magnitude', 
-    'hF': 'h`F', 
-    'foF2': 'foF2'
-    }
-
-years = [2013, 2019]
-
-# func = pw.epbs_start_time
-# func =  pw.vertical_drift
-
-func = pw.heights_frequency
-
-ds_total = join_datasets(col, func, years, days, j1)
-
-
-years = ds_total.year.values
-
-fig, axes = plt.subplots(
-    nrows = 2, 
-    figsize = (12, 8), 
-    sharex = True, 
-    sharey = True
-    )
-
-plt.subplots_adjust(hspace = 0.01)
-
-
-for i, year in enumerate(years):
-    ax = axes.flat[i]
-    
-    power = ds_total.power.sel(year = year)
-    doy = ds_total.doy.values
-    period = ds_total.period.values
-    
+def plot_sets(ax, power):
     s = pd.to_datetime(power['start'].values).date()
     e = pd.to_datetime(power['end'].values).date()
     
+    ax.set(title = f'{s} - {e}', )
+        
+        
+
+
+
+# 
+
+def plot_all_years_wavelet(
+        func, 
+        col,
+        years, 
+        j1 = 2.1, 
+        days = 365,
+        ncols = 2
+        ):
     
-    sig95 =  ds_total.sig95.sel(year = year)
+    titles = {
+        'start': 'EPBs start time', 
+        'duration': 'EPBs night duration',
+        'time': 'PRE time', 
+        'vp': 'PRE magnitude', 
+        'hF': 'h`F', 
+        'foF2': 'foF2'
+        }
     
-    cf = ax.contourf(
-        doy, 
-        period, 
-        power, 
-        levels = 30, 
-        cmap = b.custom_cmap(), 
-        extend = 'both',
-        )
-    vals = power.values
+    ds_total = join_datasets(col, func, years, days, j1)
+    
+    years = ds_total.year.values
+    
+    n = len(years)
    
-    step = find_step(vals, vmin = 0.0, n = 5)
-    ticks = np.arange(0, power.max() + step, step)
-    b.colorbar(
-            cf, 
-            ax, 
-            ticks = ticks, 
-            label = 'PSD', 
-            height = "100%", 
-            width = "3%",
-            orientation = "vertical", 
-            anchor = (.05, 0., 1, 1), 
-            color = 'k'
-            )
+    fig, axes = plt.subplots(
+        nrows = n // 2, 
+        ncols = ncols,
+        figsize = (ncols * 9, (n // 2) * 4), 
+        sharex = True, 
+        sharey = True
+        )
     
-    ax.set(title = f'{s} - {e}')
+    plt.subplots_adjust(
+        hspace = 0.2, 
+        wspace = 0.2
+        )
     
-    power_rel = power / sig95
+    for i, year in enumerate(years):
+        
+        if n > 1:
+            ax = axes.flatten(order = 'F')[i]
+        else:
+            ax = axes
+            
+        power = ds_total.power.sel(year = year)        
+        doy = ds_total.doy.values
+        period = ds_total.period.values
+        
+        sig95 =  ds_total.sig95.sel(year = year)
+        
+        plot_wavelet_subplot(ax, doy, period, power, sig95)
+        
+        plot_sets(ax, power)
+        
+        middle = years[n // 2 - 1]
+        
+        if ((year == middle) | (year == years[-1])):
+            
+            ax.set_xlabel('Day of year', fontsize = 30)
+        
+        if year <= middle:
+          
+            ax.set_ylabel('Periods (days)', fontsize = 30)
+                
+    fig.suptitle(titles[col], y = 0.95, fontsize = 30)
     
-    ax.contour(
-        doy, period, 
-        sig95, [-99, 1], 
-        colors = 'k'
-               )
-    ax.set(yticks = np.arange(2, 12, 1), 
-           ylabel = 'Periods (day)', 
-           xticks = np.arange(250, 850, 50), 
-           xlim = [250, 850],
-           ylim = [2, 10]
-           )
+    plt.show()
+    return fig 
 
-    for line in range(3):
-        ax.axvline(
-            365 * line,
-            lw = 3,
-            color = 'w', linestyle = '--'
-            )
-        
-    # for row in [3, 6, 9]:
-        
-    #     ax.axhline(row, color = 'w', lw = 1)
-        
-axes[-1].set(xlabel = 'Day of year')
-fig.suptitle(titles[col])
+days = 365
 
-plt.tight_layout()
-plt.show()
 
+col = 'hF'
+col = 'start'
+years = np.arange(2013, 2023)
+years = [2015, 2021]
+
+func = pw.epbs_start_time
+ 
+# func =  pw.vertical_drift
+
+# func = pw.heights_frequency
+
+fig = plot_all_years_wavelet(
+        func, 
+        col,
+        years, 
+        j1 = 2.3, #3.9, 
+        days = 365,
+        ncols = 2
+        )
