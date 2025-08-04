@@ -16,7 +16,9 @@ def reindex_data(df):
     full_index = pd.date_range(idx[0], idx[-1], freq='D')
     return df.reindex(full_index)
 
-
+def add_doys():
+    
+    return 
 def filter_doys(df, dn, days = 260):
     
     delta = dt.timedelta(days = days)

@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np 
 
 
-def epbs_start_time(dn, days):
+def epbs_start_time(dn, days, reindex = True):
      
     p = pb.BubblesPipe(
         'events_5', 
@@ -23,7 +23,9 @@ def epbs_start_time(dn, days):
 
     df = pw.filter_doys(df, dn, days = days)
     
-    df = pw.reindex_data(df).interpolate()
+    if reindex:
+        df = pw.reindex_data(df).interpolate()
+        
 
     return df
 
@@ -31,19 +33,21 @@ def epbs_start_time(dn, days):
 
 def plot_desviation_from_mean(ax, df, col):
     # df[col] = df[col] - df[col].mean()
-    freq = '15D'
-    mean = df[[col, 'doy']].resample(freq).mean()
-    std = df[[col, 'doy']].resample(freq).std()
+    freq = '5D'
+    # mean = df[[col, 'doy']].resample(freq).mean()
+    # std = df[[col, 'doy']].resample(freq).std()
         
-    ax.errorbar(
-        mean.doy, 
-        mean[col], 
-        yerr = std[col],
-        linestyle = 'none',
-        marker = 's', 
-        markersize = 10,
-        )
+    # ax.errorbar(
+    #     mean.doy, 
+    #     mean[col], 
+    #     yerr = std[col],
+    #     linestyle = 'none',
+    #     marker = 's', 
+    #     markersize = 10,
+    #     )
+    df['mean'] = df[col].rolling(freq).mean()
     
+    df[col] = df[col] - df['mean']
     df['std'] = df[col].rolling('5D').std()
 
     ax.errorbar(
@@ -56,7 +60,7 @@ def plot_desviation_from_mean(ax, df, col):
         markersize = 5
         )
     
-    df = df.interpolate()
+    df = df.dropna()
     x = df['doy'].values
     y = df[col].values 
     fit = b.CurveFit(x, y, period = 180)
@@ -111,8 +115,8 @@ def plot_ls(ax, x, y, Tmax = 300):
     ax.axhline(ls.best_T, lw = 2, color = 'r')
     # print(ls.best_T)
     ax.set(
-        
-           ylim = [0, max(power)])
+        ylim = [0, max(power)]
+        )
 
 def plot_time_start(years, days, col = 'start'):
     
@@ -128,12 +132,15 @@ def plot_time_start(years, days, col = 'start'):
     plt.subplots_adjust(hspace = 0.01)
     
     for i, year in enumerate(years):
-        dn = dt.datetime(year, 9, 1) 
+        dn = dt.datetime(year, 8, 1) 
         
         
-        df = epbs_start_time(dn, days)
+        df = epbs_start_time(
+            dn, days, 
+            reindex = False
+            )
         
-        fit = plot_desviation_from_mean(ax[i], df, col)
+        plot_desviation_from_mean(ax[i], df, col)
         
         df = df.copy().dropna()
         y = df[col].values
@@ -143,5 +150,8 @@ def plot_time_start(years, days, col = 'start'):
 
 years = [2013, 2019]
 
-days = 230
+dn = dt.datetime(2013, 8, 1) 
+
+days = 620
+
 plot_time_start(years, days)

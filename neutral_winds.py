@@ -29,7 +29,7 @@ def winds(dn, days, col = 'vnu_zonal'):
 
     df = b.load('cariri')
     
-    df = pb.filter_doys(df, dn, days = days)
+    df = pw.filter_doys(df, dn, days = days)
     
     df = df.between_time('21:00', '22:00')
     
@@ -41,6 +41,6 @@ def winds(dn, days, col = 'vnu_zonal'):
     
     df = removing_noise(df, factor = 1., N = 10)
     
-    df = reindex_data(df).interpolate()
+    df = pw.reindex_data(df).interpolate()
     
     return df[[ col, 'avg','doy']]
