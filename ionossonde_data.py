@@ -23,7 +23,8 @@ def heights_frequency(
         
     df = pd.concat(out)
     # print(df)
-    df = df.resample('1D').mean()
+    # df = df.resample('1D').mean()
+    df = df.loc[df.index.hour == 22]
     df = df[~df.index.duplicated(keep='first')]
     df = pw.filter_storms(df)
     
@@ -84,20 +85,6 @@ def test_doy_diff(df):
     assert (df['doy'].diff().dropna() == 1).all()
     
     
-def test_ionospheric_par():
-    
-    dn = dt.datetime(2013, 8, 1) 
-
-    days = 230
-     
-    df = heights_frequency(dn, days)
-    
-    
-    
-    
-    # print(check_diff)
-    return df 
-
 dn = dt.datetime(2013, 8, 1) 
 
 days = 620

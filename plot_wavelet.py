@@ -1,13 +1,8 @@
 # import specral as sp
 import numpy as np 
-
 import base as b
-
 from scipy.optimize import fminbound
 from scipy.special._ufuncs import gamma, gammainc
-
-__author__ = 'Evgeniya Predybaylo, Michael von Papen'
-
 
 def wavelet(Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1, freq=None):
     n1 = len(Y)
@@ -410,7 +405,7 @@ def Wavelet(sst, time, j1 = 2.3):
     return sig95, power, time, period
 
     
-def plot_wavelet(time, period, sig95, power):
+def plot_wavelet(ax, time, period, sig95, power):
     
     power = power / np.nanmax(power)
     
@@ -439,3 +434,7 @@ def plot_reference_lines(ax):
         ax.axvline(line, color = 'w', lw = 2)
 
     ax.axhline(6, color = 'w', lw = 2)
+
+
+
+# plot_wavelet(ax, time, period, sig95, power)

@@ -148,10 +148,10 @@ def plot_time_start(years, days, col = 'start'):
         
         # plot_ls( ax[i, 1], x, y)
 
-years = [2013, 2019]
+# years = [2013, 2019]
 
-dn = dt.datetime(2013, 8, 1) 
+# dn = dt.datetime(2013, 8, 1) 
 
-days = 620
+# days = 620
 
-plot_time_start(years, days)
+# plot_time_start(years, days)

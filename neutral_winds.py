@@ -1,4 +1,6 @@
 import base as b 
+import PW as pw 
+import datetime as dt 
 
 def removing_noise(
         df, 
@@ -33,14 +35,24 @@ def winds(dn, days, col = 'vnu_zonal'):
     
     df = df.between_time('21:00', '22:00')
     
-    df = df.loc[~((df[col] < 0) | (df[col] > 200))]
+    #
     
     df = df.resample('3H').mean().dropna()
      
-    df = df.loc[~(df[col] < 0 )].interpolate()
+    if 'vnu' in col:
+        df = df.loc[~(df[col] < 0 )].interpolate()
+        df = df.loc[~((df[col] < 0) | (df[col] > 200))]
     
+    if 'tn' in col:
+        
+        df = df.loc[~((df[col] > 1500) | (df[col] < 900))]
+
     df = removing_noise(df, factor = 1., N = 10)
     
     df = pw.reindex_data(df).interpolate()
     
-    return df[[ col, 'avg','doy']]
+    return df[[ col, 'avg','doy', 'std']]
+
+# df = b.load('cariri')
+
+# df.columns 

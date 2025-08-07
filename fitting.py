@@ -44,6 +44,28 @@ new_x, new_y = fit.get_values
 
 ax[0].plot(new_x, new_y)
 
+import pandas as pd
+import PW as pw 
+df = b.load('fza')
+
+df['time']  = pd.to_datetime(df['time'] )
+
+df['time'] = df['time'].apply(b.dn2float)
+
+df = pw.reindex_data(df).interpolate()
+
+df['doy'] = df.index.day_of_year
+df['year'] = df.index.year
+
+offset = df['year'] -  df['year'].min()
+
+df['doy'] = df['doy'] + 365 * offset
+
+
+sst = df['time'].values
+time = df['doy'].values
+
+sig95, power, time, period = Wavelet(sst, time, j1 = 2.3)
 
 
 

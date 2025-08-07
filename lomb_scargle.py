@@ -64,7 +64,7 @@ class Lomb_Scargle(object):
         return new_x, new_y
     
     
-def plot_(ax, x, y, best_period):
+def plot_(ax, ls, x, y, best_period):
     ax.set(
         ylim = [0, 0.8], 
         ylabel = 'PSD (normalized)', 
