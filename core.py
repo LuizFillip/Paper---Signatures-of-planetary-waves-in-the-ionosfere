@@ -14,7 +14,8 @@ def plot_wavelet_subplot(ax, doy, period, power, sig95):
         power, 
         levels = 30, 
         cmap = b.custom_cmap(), 
-        extend = 'both',
+        # extend = 'both',
+        # vmax = 1800
         )
     
     # vals = power.values
@@ -42,7 +43,7 @@ def plot_wavelet_subplot(ax, doy, period, power, sig95):
                )
     ax.set(
         yticks = np.arange(2, max(period), 2), 
-        xticks = np.arange(0, 365, 50),
+        xticks = np.arange(220, 320, 20),
            ylim = [2, max(period)]
            )
     
@@ -52,6 +53,8 @@ def plot_wavelet_subplot(ax, doy, period, power, sig95):
     #     transform = ax.transAxes
     #     )
     
+    for line in [265, 275]:
+        ax.axvline(line, color = 'w', lw = 2)
     return 
 
    
@@ -121,10 +124,15 @@ def plot_sets(ax, power):
     ax.set(title = f'{s} - {e}', )
         
         
+titles = {
+    'start': 'EPBs start time', 
+    'duration': 'EPBs night duration',
+    'time': 'PRE time', 
+    'vp': 'PRE magnitude', 
+    'hF': 'h`F', 
+    'foF2': 'foF2'
+    }
 
-
-
-# 
 
 def plot_all_years_wavelet(
         func, 
@@ -135,14 +143,6 @@ def plot_all_years_wavelet(
         ncols = 2
         ):
     
-    titles = {
-        'start': 'EPBs start time', 
-        'duration': 'EPBs night duration',
-        'time': 'PRE time', 
-        'vp': 'PRE magnitude', 
-        'hF': 'h`F', 
-        'foF2': 'foF2'
-        }
     
     ds_total = join_datasets(col, func, years, days, j1)
     
@@ -195,22 +195,42 @@ def plot_all_years_wavelet(
     plt.show()
     return fig 
 
+def dtrend(df, threshold = 200):
+    
+    df = df.loc[~(df[col] < threshold)]
+    
+    df = pw.reindex_data(df).interpolate()
+    
+    df['avg'] = df[col].rolling(freq).mean()
+    df[col] = df[col] - df['avg']
+    
+    return df
+
 days = 365
 
 
 col = 'hF'
-col = 'start'
-years = np.arange(2013, 2023)
-years = [2013]
 
-dn = dt.datetime(2013, 1, 1) 
-df = pw.epbs_start_time(dn, days )
+# years = np.arange(2013, 2023)
+years = [2022]
+
+dn = dt.datetime(2016, 1, 1) 
+# dn = dt.datetime(2013, 9, 15)
+days  = 200
  
-# col = 'vp'
+# col = 'time'
 # df =  pw.vertical_drift(dn, days)
 
 col = 'hF'
 df = pw.heights_frequency(dn, days)
+
+# col = 'vnu_merid'
+# df = pw.winds(dn, days, col )
+
+# col = 'start'
+# df = pw.epbs_start_time(dn, days )
+
+
 
 # fig = plot_all_years_wavelet(
 #         func, 
@@ -225,20 +245,26 @@ fig, ax = plt.subplots(
      figsize = (12, 8),
      nrows = 2,
      sharex = True, 
-     # sharey = True
+     dpi = 300
      )
 
 freq = '15D'
+j1 = 3.5
 
-df['mean'] = df[col].rolling(freq).mean()
+df = dtrend(df, threshold = 200)
 
-df[col] = df[col] - df['mean']
+doy = df['doy'].values
 
 sst = df[col].values 
-doy = df['doy'].values 
 
 ax[0].plot(doy, sst)
 
-sig95, power, doy, period = pw.Wavelet(sst, doy, j1 = 2.1)
+ax[0].set(title = titles[col])
+
+sig95, power, doy, period = pw.Wavelet(sst, doy, j1 = j1)
 
 plot_wavelet_subplot(ax[-1], doy, period, power, sig95)
+
+ax[-1].set(xlabel = 'Day of year',
+           ylabel = 'Period (days)', 
+           yticks = np.arange(2, 12, 2))
