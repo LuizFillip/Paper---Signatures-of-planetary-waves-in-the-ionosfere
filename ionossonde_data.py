@@ -6,8 +6,21 @@ import datetime as dt
 import base as b 
 import os 
 
+
+def dtrend(df, col, threshold = 200, freq = '15D'):
+    
+    df = df.loc[~(df[col] < threshold)]
+    
+    df = pw.reindex_data(df).interpolate()
+    
+    df['avg'] = df[col].rolling(freq).mean()
+    df[col] = df[col] - df['avg']
+    
+    return df
+
 def heights_frequency(
         dn, days, 
+        col,
         site = 'saa', 
         reindex = True
         ):
@@ -34,6 +47,10 @@ def heights_frequency(
         df = pw.reindex_data(df).interpolate()
 
     columns = ['foF2', 'hF', 'hmF2', 'doy']
+    
+    if col == 'hF':
+        df = dtrend(df, col, threshold = 200)
+
     
     return df[columns].dropna()
 
