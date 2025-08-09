@@ -1,7 +1,14 @@
 import matplotlib.pyplot as plt 
 import numpy as np 
+import base as b 
+import PW as pw
+import datetime as dt 
 
-def plot_desviation_from_mean(ax, df, col):
+
+def plot_desviation_from_mean(
+        ax, df, col, dtrend = False
+        ):
+    
     # df[col] = df[col] - df[col].mean()
     freq = '5D'
     # mean = df[[col, 'doy']].resample(freq).mean()
@@ -15,10 +22,12 @@ def plot_desviation_from_mean(ax, df, col):
     #     marker = 's', 
     #     markersize = 10,
     #     )
-    df['mean'] = df[col].rolling(freq).mean()
+    if dtrend:
+        df['mean'] = df[col].rolling(freq).mean()
+        
+        df[col] = df[col] - df['mean']
     
-    df[col] = df[col] - df['mean']
-    df['std'] = df[col].rolling('5D').std()
+    df['std'] = df[col].rolling(freq).std()
 
     ax.errorbar(
         df['doy'], 
@@ -30,17 +39,8 @@ def plot_desviation_from_mean(ax, df, col):
         markersize = 5
         )
     
-    df = df.dropna()
-    x = df['doy'].values
-    y = df[col].values 
-    fit = b.CurveFit(x, y, period = 180)
     
-    
-    xfit, yfit = fit.get_values
-    ax.plot(xfit, yfit, lw = 2, color = 'r') 
-    
-    
-    return fit
+    return 
     
 
 
@@ -58,60 +58,88 @@ def plot_infos(df, ax, i):
     
 
 
-def plot_residual(ax, fit):
-    
-    x, y = fit.residual
-    ax.scatter(x, y)
-    
-    ax.set(ylim = [-1, 1]) 
 
-def plot_ls(ax, x, y, Tmax = 300):
+titles = {
+    'start': 'EPBs start time (UT)', 
+    'duration': 'EPBs night duration',
+    'time': 'PRE time (UT)', 
+    'vp': 'PRE magnitude', 
+    'hF': 'h`F (km)', 
+    'foF2': 'foF2', 
+    'vnu_zonal': 'Zonal wind (m/s)', 
+    'roti': 'Average ROTI (TEC/min)'
+    }
+
+
+
+def plot_column_data(ax, j, df, col, j1 = 2.2):
     
-    y = y - np.mean(y)
-    yfilt = b.filter_frequencies(
-            y, 
-            high_period = 20, 
-            low_period = 2, 
-            fs = 6, 
-            order = 5
-            )
+    doy = df['doy'].values
     
-    ls = pw.Lomb_Scargle(x, yfilt, Tmax = Tmax)
+    sst = df[col].values 
     
-    periods, power = ls.result
+    plot_desviation_from_mean(ax[0, j], df, col)
     
-    ax.plot(periods, power)
+    ax[0, j].set(ylabel = titles[col])
     
-    ax.axhline(ls.best_T, lw = 2, color = 'r')
-    # print(ls.best_T)
-    ax.set(
-        ylim = [0, max(power)]
+    sig95, power, doy, period = pw.Wavelet(
+        sst, doy, j1 = j1)
+    
+    pw.plot_wavelet_subplot(
+        ax[-1, j], doy, period, power, sig95)
+    
+    ax[-1, j].set(
+        xlabel = 'Day of year - 2013',
+        ylabel = 'Period (days)', 
+        xlim = [220, 320], 
+        yticks = np.arange(2, 11, 1)
         )
 
-def plot_time_start(years, days, col = 'start'):
-    
+def plot_start_time_and_roti():
+
     fig, ax = plt.subplots(
-        dpi = 300, 
-        nrows = len(years),
-        ncols = 1,
-        sharex = 'col',
-        # sharey = True,
-        figsize = (14, 16)
-        )
+          figsize = (16, 10),
+          nrows = 2,
+          ncols = 2,
+          sharex = True, 
+          dpi = 300
+          )
     
-    plt.subplots_adjust(hspace = 0.01)
     
-    for i, year in enumerate(years):
-        dn = dt.datetime(year, 8, 1) 
-        
-        
-        df = epbs_start_time(
-            dn, days, 
-            reindex = False
-            )
-        
-        plot_desviation_from_mean(ax[i], df, col)
-        
-        df = df.copy().dropna()
-        y = df[col].values
-        x = df['doy'].values 
+    plt.subplots_adjust(hspace = 0.05, wspace = 0.4)
+    
+    dn = dt.datetime(2013, 8, 1)
+    days  = 120
+     
+    df = pw.epbs_start_time(dn, days )
+    
+    plot_column_data(ax, 0, df, col = 'start')
+    
+    df = pw.avg_of_roti(dn, days)
+    
+    plot_column_data(ax, 1, df, col = 'roti')
+
+
+fig, ax = plt.subplots(
+      figsize = (16, 10),
+      nrows = 2,
+      ncols = 2,
+      sharex = True, 
+      dpi = 300
+      )
+
+plt.subplots_adjust(hspace = 0.05, wspace = 0.4)
+
+dn = dt.datetime(2013, 9, 11)
+days  = 120
+
+# col = 'time'
+df =  pw.vertical_drift(dn, days)
+
+plot_column_data(ax, 0, df, 'vp') 
+
+col = 'hF'
+df = pw.heights_frequency(dn, days, col)
+
+
+plot_column_data(ax, 1, df, col) 
