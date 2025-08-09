@@ -6,7 +6,8 @@ import base as b
 import numpy as np 
 import pandas as pd
 
-def plot_wavelet_subplot(ax, doy, period, power, sig95):
+def plot_wavelet_subplot(
+        ax, doy, period, power, sig95):
 
     cf = ax.contourf(
         doy, 
@@ -17,6 +18,7 @@ def plot_wavelet_subplot(ax, doy, period, power, sig95):
         )
      
     step = find_step(power, vmin = 0.0, n = 4)
+    # step = 0.05
     ticks = np.arange(0, power.max(), step)
     b.colorbar(
             cf, 
@@ -120,20 +122,7 @@ def plot_sets(ax, power):
     ax.set(title = f'{s} - {e}', )
         
         
-titles = {
-    'start': 'EPBs start time', 
-    'duration': 'EPBs night duration',
-    'time': 'PRE time', 
-    'vp': 'PRE magnitude', 
-    'hF': 'h`F', 
-    'foF2': 'foF2', 
-    'vnu_zonal': 'Zonal wind', 
-    'roti': 'Average ROTI'
-    }
 
-ylabel = {
-    
-    }
 
 def plot_all_years_wavelet(
         func, 
@@ -184,106 +173,24 @@ def plot_all_years_wavelet(
         
         middle = years[n // 2 - 1]
         
-        if ((year == middle) | (year == years[-1])):
+        if ((year == middle) | 
+            (year == years[-1])):
             
-            ax.set_xlabel('Day of year', fontsize = 30)
+            ax.set_xlabel('Day of year', 
+                          fontsize = 30)
         
         if year <= middle:
           
-            ax.set_ylabel('Periods (days)', fontsize = 30)
+            ax.set_ylabel('Periods (days)', 
+                          fontsize = 30)
                 
-    fig.suptitle(titles[col], y = 0.95, fontsize = 30)
+    # fig.suptitle(titles[col], y = 0.95, 
+    #              fontsize = 30)
     
     plt.show()
     return fig 
 
 
-days = 365
-
-
-col = 'hF'
-
-# years = np.arange(2013, 2023)
-
-dn = dt.datetime(2013, 1, 1) 
-dn = dt.datetime(2013, 9, 15)
-days  = 100
- 
-# col = 'time'
-# df =  pw.vertical_drift(dn, days)
-
-col = 'foF2'
-df = pw.heights_frequency(dn, days, col)
-
-col = 'vnu_zonal'
-df = pw.winds(dn, days, col )
-
-col = 'start'
-df = pw.epbs_start_time(dn, days )
 
 
 
-# fig = plot_all_years_wavelet(
-#         func, 
-#         col,
-#         years, 
-#         j1 = 2.3, #3.9, 
-#         days = 365,
-#         ncols = 1
-#         )
-
-
-
-def roti(year, col = '-50'):
-    
-    infile = f'E:\\database\\epbs\\longs\\{year}'
-    
-    df = b.load(infile)
-    
-    df = df.between_time('21:00', '23:00')
-    
-    ds = df.resample('1D').mean()
-    
-    ds = b.re_index(ds).interpolate()
-
-    return ds.loc[ds.index.year == year,  [col]]
-
-year = 2013
-df = roti(year, col = '-50')
-
-df['doy'] = df.index.day_of_year
-
-df.rename(columns = {'-50':'roti'}, inplace = True)
-
-col = 'epb'
-
-
-fig, ax = plt.subplots(
-      figsize = (12, 8),
-      nrows = 2,
-      sharex = True, 
-      dpi = 300
-      )
-
-
-j1 = 2.2
-
-
-doy = df['doy'].values
-
-sst = df[col].values 
-
-ax[0].plot(doy, sst)
-
-ax[0].set(title = titles[col])
-
-sig95, power, doy, period = pw.Wavelet(
-    sst, doy, j1 = j1)
-
-plot_wavelet_subplot(ax[-1], doy, period, power, sig95)
-
-ax[-1].set(
-    xlabel = 'Day of year',
-    ylabel = 'Period (days)', 
-    xlim = [220, 300]
-    )
