@@ -5,6 +5,18 @@ import base as b
 import PW as pw
 
 
+
+def extrapolate_backward(df, dn):
+    
+    new_index = pd.date_range(
+        dn.date(), df.index[-1], freq = 'D'
+        )
+    
+    df = df.reindex(new_index).interpolate(
+        method ='linear', limit_direction ='backward')
+
+    return df  
+
 def epbs_start_time(
         dn, days, reindex = True):
      
@@ -21,12 +33,15 @@ def epbs_start_time(
     df = df[~df.index.duplicated(keep = 'first')]
 
     df = pw.filter_doys(df, dn, days = days)
-    
+    df = df.loc[~(df['start'] > 22.50)]
+    df = df.loc[~(df['duration'] < 2)]
     if reindex:
-        df = pw.reindex_data(df).interpolate()
-        
-
-    return df
+        df = pw.reindex_data(df).interpolate(
+            method = 'spline', 
+            order = 5
+            )
+    
+    return df 
 
 def roti(year, col = '-50'):
     
@@ -40,9 +55,8 @@ def roti(year, col = '-50'):
     
     ds = b.re_index(ds).interpolate()
 
-    return ds.loc[ds.index.year == year,  [col]]
+    return ds.loc[ds.index.year == year, [col]]
 
-year = 2013
 
 def avg_of_roti(dn, days):
     
@@ -57,4 +71,7 @@ def avg_of_roti(dn, days):
     
     return df 
 
+
+def test_epbs_start_time(dn, days):
         
+    epbs_start_time( dn, days, reindex = True)

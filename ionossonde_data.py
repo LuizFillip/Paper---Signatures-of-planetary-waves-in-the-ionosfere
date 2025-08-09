@@ -44,13 +44,13 @@ def heights_frequency(
     df = pw.filter_doys(df, dn, days = days)
     
     if reindex:
-        df = pw.reindex_data(df).interpolate()
+        df = pw.reindex_data(df).interpolate(
+            # method = 'spline', 
+            # order = 5
+            )
 
     columns = ['foF2', 'hF', 'hmF2', 'doy']
     
-    if col == 'hF':
-        df = dtrend(df, col, threshold = 200)
-
     
     return df[columns].dropna()
 
@@ -95,18 +95,12 @@ def vertical_drift(
         df = pw.reindex_data(df).interpolate()
         
     return df 
-    
-    # return df 
 
 def test_doy_diff(df):
     assert (df['doy'].diff().dropna() == 1).all()
     
-    
-dn = dt.datetime(2013, 8, 1) 
 
-days = 620
-
-def plot_long_term_series(dn, days):
+def plot_long_term_series(dn, days, site = 'saa'):
     
     fig, ax = plt.subplots(
         nrows = 2, 
@@ -115,9 +109,7 @@ def plot_long_term_series(dn, days):
         sharex = True,
         figsize = (16, 8)
         )
-    
-    site = 'saa'
-    
+      
     titles = {
         'fza': 'Fortaleza',
         'saa': 'São Luís'
@@ -173,7 +165,11 @@ def plot_long_term_series(dn, days):
         pad = 60
         )
         
-    ds = vertical_drift(dn, days, reindex = False, site=site)
+    ds = vertical_drift(
+        dn, days, 
+        reindex = False, 
+        site = site
+        )
     labels = ['PRE magnitude (m/s)', 'PRE time (UT)']
     limits = [[0, 90], [20, 24]]
     
@@ -220,5 +216,9 @@ def plot_long_term_series(dn, days):
     fig.suptitle(f'Ionossonde {titles[site]} parameters')
     
     
+dn = dt.datetime(2013, 9, 11) 
+
+days = 620
+
 # plot_long_term_series(dn, days)
 
