@@ -11,20 +11,17 @@ def removing_noise(
     
     smooth_factor = N * 1
     
-    df['avg'] =  b.smooth2(b.running(df[col], N), smooth_factor
+    df['avg'] =  b.smooth2(
+        b.running(df[col], N),               
+                           smooth_factor
         )
     
-    df['std'] =  b.smooth2(
-        b.running_std(df[col], N), 
+    df['std'] =  b.smooth2(b.running_std(df[col], N), 
         smooth_factor
         )
 
-    cond = (
-        df[col] > df['avg'] + 
-        df['std'] * factor
-            )
-    
-    
+    cond = (df[col] > df['avg'] + df['std'] * factor)
+       
     return df.loc[~(cond)]
 
 def winds(dn, days, col = 'vnu_zonal'):

@@ -60,7 +60,8 @@ def fix_drift(df):
     
     df.rename(
         columns = {'vzp': 'vp'}, 
-        inplace = True)
+        inplace = True
+        )
     
     df.index = pd.to_datetime(df.index.date)  
 

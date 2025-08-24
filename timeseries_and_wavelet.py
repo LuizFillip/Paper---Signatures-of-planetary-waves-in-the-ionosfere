@@ -4,24 +4,29 @@ import base as b
 import PW as pw
 import datetime as dt 
 
+b.sci_format(fontsize = 25)
 
 def plot_desviation_from_mean(
-        ax, df, col, dtrend = False
+        ax, df, col, 
+        dtrend = False, 
+        freq = '5D'
         ):
     
-    # df[col] = df[col] - df[col].mean()
-    freq = '5D'
-    # mean = df[[col, 'doy']].resample(freq).mean()
-    # std = df[[col, 'doy']].resample(freq).std()
-        
-    # ax.errorbar(
-    #     mean.doy, 
-    #     mean[col], 
-    #     yerr = std[col],
-    #     linestyle = 'none',
-    #     marker = 's', 
-    #     markersize = 10,
-    #     )
+    def plot_mean(ax, df, freq = '5D'):
+    
+        mean = df[[col, 'doy']].resample(freq).mean()
+        std = df[[col, 'doy']].resample(freq).std()
+            
+        ax.errorbar(
+            mean.doy, 
+            mean[col], 
+            yerr = std[col],
+            lw = 2,
+            marker = 'o', 
+            markersize = 10,
+            capsize = 7, 
+            )
+    
     if dtrend:
         df['mean'] = df[col].rolling(freq).mean()
         
@@ -35,8 +40,8 @@ def plot_desviation_from_mean(
         yerr = df['std'], 
         linestyle = 'none', 
         marker = 'o', 
-        # alpha = 0.5,
-        markersize = 5
+        alpha = 0.5,
+        markersize = 7
         )
     
     
@@ -51,10 +56,12 @@ def plot_infos(df, ax, i):
     l = b.chars()[i]
   
     ax.text(
-        0.01, 0.8, 
+        0.01, 0.9, 
         f'({l}) {s} - {e}', 
         transform = ax.transAxes
         )
+    
+    return None 
     
 
 
@@ -72,33 +79,46 @@ titles = {
 
 
 
-def plot_column_data(ax, j, df, col, j1 = 2.2):
+def plot_column_data(axs, j, df, col, j1 = 2.2):
+    
+    if j == None:
+        ax = axs[0]
+        ax1 = axs[-1]
+    else:
+        ax1 = axs[-1, j]
+        ax = axs[0, j]
     
     doy = df['doy'].values
     
     sst = df[col].values 
     
-    plot_desviation_from_mean(ax[0, j], df, col)
+    plot_desviation_from_mean(ax, df, col)
     
-    ax[0, j].set(ylabel = titles[col])
+    ax.set(ylabel = titles[col])
     
     sig95, power, doy, period = pw.Wavelet(
         sst, doy, j1 = j1)
     
     pw.plot_wavelet_subplot(
-        ax[-1, j], doy, period, power, sig95)
+        ax1, doy, period, power, sig95)
     
-    ax[-1, j].set(
+    ax1.set(
         xlabel = 'Day of year - 2013',
         ylabel = 'Period (days)', 
         xlim = [220, 320], 
+        
         yticks = np.arange(2, 11, 1)
         )
+    
+    for line in [265, 280]:
+        ax1.axvline(line, color = 'w', lw = 3)
+    
+    return ax 
 
 def plot_start_time_and_roti():
 
     fig, ax = plt.subplots(
-          figsize = (16, 10),
+          figsize = (16, 12),
           nrows = 2,
           ncols = 2,
           sharex = True, 
@@ -106,40 +126,126 @@ def plot_start_time_and_roti():
           )
     
     
-    plt.subplots_adjust(hspace = 0.05, wspace = 0.4)
+    plt.subplots_adjust(
+        hspace = 0.05, 
+        wspace = 0.4
+        )
     
     dn = dt.datetime(2013, 8, 1)
     days  = 120
      
     df = pw.epbs_start_time(dn, days )
     
-    plot_column_data(ax, 0, df, col = 'start')
+    ax2 = plot_column_data(ax, 0, df, col = 'start')
     
+    ax2.set( ylim = [21, 23])
     df = pw.avg_of_roti(dn, days)
     
-    plot_column_data(ax, 1, df, col = 'roti')
+    ax2 = plot_column_data(ax, 1, df, col = 'roti')
+    
+    ax2.set(ylim = [0, 2])
+    
+    for i, axs in enumerate(ax.flat):
+        l = b.chars()[i]
+        if i == 3:
+            c = 'w'
+        else:
+            c = 'k'
+        axs.text(
+            0.05, 0.85, f'({l})', 
+            transform = axs.transAxes,
+            color = c, 
+            fontsize = 35
+            )
+        
+    return None 
 
 
-fig, ax = plt.subplots(
-      figsize = (16, 10),
-      nrows = 2,
-      ncols = 2,
-      sharex = True, 
-      dpi = 300
-      )
+def plot_single_spectral_and_ts():
+    
+    
+    fig, ax = plt.subplots(
+          figsize = (16, 10),
+          nrows = 2,
+          sharex = True, 
+          dpi = 300
+          )
+    
+    plt.subplots_adjust(hspace = 0.05, wspace = 0.4)
+    
+    dn = dt.datetime(2013, 9, 1)
+    days  = 120
+    
+    col = 'time'
+    df =  pw.vertical_drift(dn, days)
+    
+    # # plot_column_data(ax, 0, df, 'vp') 
+    
+    col = 'hF'
+    df = pw.heights_frequency(dn, days, col)
+    # col = 'vnu_zonal'
+    
+    
+    # df = pw.winds(dn, days, col )
+    
+    # df['mean'] = df[col].rolling('5D').mean()
+    
+    # df[col] = df[col] - df['mean']
+    
+    plot_column_data(ax, None, df, col) 
+    
+    for i, axs in enumerate(ax.flat):
+        l = b.chars()[i]
+        if i == 3:
+            c = 'w'
+        else:
+            c = 'k'
+        axs.text(
+            0.01, 0.85, f'({l})', 
+            transform = axs.transAxes,
+            color = c, 
+            fontsize = 35
+            )
+    
+    return fig
+    
 
-plt.subplots_adjust(hspace = 0.05, wspace = 0.4)
-
-dn = dt.datetime(2013, 9, 11)
-days  = 120
-
-# col = 'time'
-df =  pw.vertical_drift(dn, days)
-
-plot_column_data(ax, 0, df, 'vp') 
-
-col = 'hF'
-df = pw.heights_frequency(dn, days, col)
+# plot_start_time_and_roti()
 
 
-plot_column_data(ax, 1, df, col) 
+# fig = plot_start_time_and_roti()
+
+def fit_analysis():
+
+    dn = dt.datetime(2013, 8, 1)
+    days  = 80
+    col = 'start'
+    df = pw.epbs_start_time(dn, days,  reindex = False)
+    
+    df['mean'] = df[col].rolling('10D').mean()
+    
+    df[col] = df[col] - df['mean']
+    y = df['start'].values
+    x = df['doy'].values
+    ls = pw.Lomb_Scargle(x, y, Tmax = 15)
+    
+    period, power = ls.result
+    
+    # plt.plot(period, power)
+    fit = b.CurveFit(
+        x, 
+        y, 
+        period = 7
+        )
+    
+    nx, ny = fit.get_values
+    
+    plt.plot(x, y)
+    plt.plot(nx, ny)
+    
+    
+    fit.parameters
+    
+    # ls.fap
+
+# plot_single_spectral_and_ts()

@@ -44,7 +44,7 @@ class Lomb_Scargle(object):
         self.x = x
         self.y = y
         
-        self.fap_level = ls.false_alarm_level(0.05)
+        self.fap = ls.false_alarm_level(0.05)
     
     @property 
     def result(self):

@@ -41,6 +41,6 @@ def plot_timeseries_and_wavelet(
         cmap = 'jet'
         )
 
-dn = dt.datetime(2013, 9, 1) 
-days = 260
+# dn = dt.datetime(2013, 9, 1) 
+# days = 260
 
