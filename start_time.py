@@ -17,17 +17,18 @@ def extrapolate_backward(df, dn):
 
 def epbs_start_time(dn, days, reindex=True):
 
-    p = pb.BubblesPipe("events_5", drop_lim=0.5, storm="quiet")
+    p = pb.BubblesPipe("events_5", drop_lim=0.2, storm="quiet")
 
-    ds = p.sel_type("sunset")
+    # ds = p.sel_type("sunset")
+    ds = p.df
 
     df = ds.loc[(ds["lon"] == -50)]
 
     df = df[~df.index.duplicated(keep="first")]
 
     df = pw.filter_doys(df, dn, days=days)
-    df = df.loc[~(df["start"] > 22.50)]
-    df = df.loc[~(df["duration"] < 2)]
+    # df = df.loc[~(df["start"] > 22.50)]
+    # df = df.loc[~(df["duration"] < 2)]
     if reindex:
         df = pw.reindex_data(df).interpolate(method="spline", order=5)
 
@@ -67,17 +68,9 @@ def test_epbs_start_time(dn, days):
     epbs_start_time(dn, days, reindex=True)
 
 
-
-
-
-
-
-def single_plot(ax, year):
+def single_plot(ax, year, col = "-50"):
     df = roti(year, col="-50")
     df["doy"] = df.index.day_of_year
-
-    col = "-50"
-
     doy = df["doy"].values
 
     sst = df[col].values
@@ -85,18 +78,17 @@ def single_plot(ax, year):
 
     pw.plot_wavelet_subplot(ax, doy, period, power, sig95)
 
-def plot():
-    fig, ax = plt.subplots(nrows=5, ncols=2, sharex=True, sharey=True, figsize=(18, 14))
+
+def load_events_case(dn, days):
+    df = b.load('cariri_events')
+
+    df.loc[df['start'] < 20, 'start'] += 24
+
+    df = df.loc[df.index.year == dn.year]
     
-    # ax[0].plot(doy, sst)
-    year = 2013
+    df = pw.filter_doys(df, dn, days=days)
     
-    years = list(range(2013, 2023))
-    
-    axs = ax.flat
-    
-    for i, yr in enumerate(years):
-    
-        single_plot(axs[i], yr)
-    
-        axs[i].set(title=yr)
+    df = pw.reindex_data(df).interpolate(
+        method = "spline", 
+        order = 5
+        ).dropna()
