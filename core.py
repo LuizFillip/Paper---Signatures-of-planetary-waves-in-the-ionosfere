@@ -9,9 +9,15 @@ import pandas as pd
 
 def plot_wavelet_subplot(ax, doy, period, power, sig95):
 
-    cf = ax.contourf(doy, period, power, levels=30, cmap=b.custom_cmap())
+    cf = ax.contourf(
+        doy, 
+        period, 
+        power, 
+        levels=30, 
+        cmap = b.custom_cmap()
+        )
 
-    step = find_step(power, vmin=0.0, n=4)
+    # step = find_step(power, vmin=0.0, n=4)
     # step = 0.05
     # ticks = np.arange(0, power.max(), step)
     # b.colorbar(
@@ -26,7 +32,7 @@ def plot_wavelet_subplot(ax, doy, period, power, sig95):
     #         color = 'k'
     #         )
 
-    ax.contour(doy, period, sig95, [-99, 1], colors='k')
+    ax.contour(doy, period, sig95, [-99, 1], colors="k")
     ax.set(
         yticks=np.arange(2, max(period), 2),
         xticks=np.arange(min(doy), max(doy), 20),
@@ -48,7 +54,7 @@ def find_maximus(ds_total, years):
     return max(res)
 
 
-def join_datasets(col, func, years, days, j1, freq='15D'):
+def join_datasets(col, func, years, days, j1, freq="15D"):
 
     datasets = []
 
@@ -56,37 +62,37 @@ def join_datasets(col, func, years, days, j1, freq='15D'):
 
         dn = dt.datetime(year, 1, 1)
         df = func(dn, days)
-        df = df.drop_duplicates(subset='doy')
+        df = df.drop_duplicates(subset="doy")
 
-        df['mean'] = df[col].rolling(freq).mean()
+        df["mean"] = df[col].rolling(freq).mean()
 
-        df[col] = df[col] - df['mean']
+        df[col] = df[col] - df["mean"]
 
         sst = df[col].values
-        doy = df['doy'].values
+        doy = df["doy"].values
 
         sig95, power, doy, period = pw.Wavelet(sst, doy, j1=j1)
 
         ds = xr.Dataset(
             {
-                'power': (['period', 'doy'], power),
-                'sig95': (['period', 'doy'], sig95),
+                "power": (["period", "doy"], power),
+                "sig95": (["period", "doy"], sig95),
             },
             coords={
-                'period': period,
-                'doy': doy,
-                'start': ('year', [df.index[0]]),
-                'end': ('year', [df.index[-1]]),
+                "period": period,
+                "doy": doy,
+                "start": ("year", [df.index[0]]),
+                "end": ("year", [df.index[-1]]),
             },
         )
 
-        if 'year' not in ds.dims:
+        if "year" not in ds.dims:
 
-            ds = ds.expand_dims({'year': [year]})
+            ds = ds.expand_dims({"year": [year]})
 
         datasets.append(ds)
 
-    return xr.concat(datasets, dim='year')
+    return xr.concat(datasets, dim="year")
 
 
 def find_step(vals, vmin=0.0, n=5, order=2):
@@ -101,17 +107,21 @@ def find_step(vals, vmin=0.0, n=5, order=2):
 
 
 def plot_sets(ax, power):
-    s = pd.to_datetime(power['start'].values).date()
-    e = pd.to_datetime(power['end'].values).date()
+    s = pd.to_datetime(power["start"].values).date()
+    e = pd.to_datetime(power["end"].values).date()
 
     ax.set(
-        title=f'{s} - {e}',
+        title=f"{s} - {e}",
     )
 
 
-def plot_all_years_wavelet(func, col, years, j1=2.1, days=365, ncols=2):
+def plot_all_years_wavelet(
+        func, 
+        column, 
+        years, j1=2.1, days=365, ncols=2
+        ):
 
-    ds_total = join_datasets(col, func, years, days, j1)
+    ds_total = join_datasets(column, func, years, days, j1)
 
     years = ds_total.year.values
 
@@ -130,7 +140,7 @@ def plot_all_years_wavelet(func, col, years, j1=2.1, days=365, ncols=2):
     for i, year in enumerate(years):
 
         if n > 1:
-            ax = axes.flatten(order='F')[i]
+            ax = axes.flatten(order="F")[i]
         else:
             ax = axes
 
@@ -148,11 +158,11 @@ def plot_all_years_wavelet(func, col, years, j1=2.1, days=365, ncols=2):
 
         if (year == middle) | (year == years[-1]):
 
-            ax.set_xlabel('Day of year', fontsize=30)
+            ax.set_xlabel("Day of year", fontsize=30)
 
         if year <= middle:
 
-            ax.set_ylabel('Periods (days)', fontsize=30)
+            ax.set_ylabel("Periods (days)", fontsize=30)
 
     # fig.suptitle(titles[col], y = 0.95,
     #              fontsize = 30)

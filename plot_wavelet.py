@@ -1,8 +1,9 @@
 # import specral as sp
-import numpy as np 
+import numpy as np
 import base as b
 from scipy.optimize import fminbound
 from scipy.special._ufuncs import gamma, gammainc
+
 
 def wavelet(Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1, freq=None):
     n1 = len(Y)
@@ -10,11 +11,11 @@ def wavelet(Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1, freq=None):
     if s0 == -1:
         s0 = 2 * dt
     if dj == -1:
-        dj = 1. / 4.
+        dj = 1.0 / 4.0
     if J1 == -1:
         J1 = np.fix((np.log(n1 * dt / s0) / np.log(2)) / dj)
     if mother == -1:
-        mother = 'MORLET'
+        mother = "MORLET"
 
     # construct time series to analyze, pad if necessary
     x = Y - np.mean(Y)
@@ -28,51 +29,57 @@ def wavelet(Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1, freq=None):
 
     # construct wavenumber array used in transform [Eqn(5)]
     kplus = np.arange(1, int(n / 2) + 1)
-    kplus = (kplus * 2 * np.pi / (n * dt))
+    kplus = kplus * 2 * np.pi / (n * dt)
     kminus = np.arange(1, int((n - 1) / 2) + 1)
     kminus = np.sort((-kminus * 2 * np.pi / (n * dt)))
-    k = np.concatenate(([0.], kplus, kminus))
+    k = np.concatenate(([0.0], kplus, kminus))
 
     # compute FFT of the (padded) time series
     f = np.fft.fft(x)  # [Eqn(3)]
 
     # construct SCALE array & empty PERIOD & WAVE arrays
-    if mother.upper() == 'MORLET':
+    if mother.upper() == "MORLET":
         if param == -1:
-            param = 6.
+            param = 6.0
         fourier_factor = 4 * np.pi / (param + np.sqrt(2 + param**2))
-    elif mother.upper() == 'PAUL':
+    elif mother.upper() == "PAUL":
         if param == -1:
-            param = 4.
+            param = 4.0
         fourier_factor = 4 * np.pi / (2 * param + 1)
-    elif mother.upper() == 'DOG':
+    elif mother.upper() == "DOG":
         if param == -1:
-            param = 2.
-        fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * param + 1))
+            param = 2.0
+        fourier_factor = 2 * np.pi * np.sqrt(2.0 / (2 * param + 1))
     else:
         fourier_factor = np.nan
 
     if freq is None:
         j = np.arange(0, J1 + 1)
-        scale = s0 * 2. ** (j * dj)
-        freq = 1. / (fourier_factor * scale)
-        period = 1. / freq
+        scale = s0 * 2.0 ** (j * dj)
+        freq = 1.0 / (fourier_factor * scale)
+        period = 1.0 / freq
     else:
-        scale = 1. / (fourier_factor * freq)
-        period = 1. / freq
+        scale = 1.0 / (fourier_factor * freq)
+        period = 1.0 / freq
     # define the wavelet array
     wave = np.zeros(shape=(len(scale), n), dtype=complex)
 
     # loop through all scales and compute transform
     for a1 in range(0, len(scale)):
-        daughter, fourier_factor, coi, _ = \
-            wave_bases(mother, k, scale[a1], param)
+        daughter, fourier_factor, coi, _ = wave_bases(mother, k, scale[a1], param)
         wave[a1, :] = np.fft.ifft(f * daughter)  # wavelet transform[Eqn(4)]
 
     # COI [Sec.3g]
-    coi = coi * dt * np.concatenate((
-        np.insert(np.arange(int((n1 + 1) / 2) - 1), [0], [1E-5]),
-        np.insert(np.flipud(np.arange(0, int(n1 / 2) - 1)), [-1], [1E-5])))
+    coi = (
+        coi
+        * dt
+        * np.concatenate(
+            (
+                np.insert(np.arange(int((n1 + 1) / 2) - 1), [0], [1e-5]),
+                np.insert(np.flipud(np.arange(0, int(n1 / 2) - 1)), [-1], [1e-5]),
+            )
+        )
+    )
     wave = wave[:, :n1]  # get rid of padding before returning
 
     return wave, period, scale, coi
@@ -102,50 +109,51 @@ def wavelet(Y, dt, pad=0, dj=-1, s0=-1, J1=-1, mother=-1, param=-1, freq=None):
 #    DOFMIN = a number, degrees of freedom for each point in the wavelet power
 #             (either 2 for Morlet and Paul, or 1 for the DOG)
 
+
 def wave_bases(mother, k, scale, param):
     n = len(k)
-    kplus = np.array(k > 0., dtype=float)
+    kplus = np.array(k > 0.0, dtype=float)
 
-    if mother == 'MORLET':  # -----------------------------------  Morlet
+    if mother == "MORLET":  # -----------------------------------  Morlet
 
         if param == -1:
-            param = 6.
+            param = 6.0
 
         k0 = np.copy(param)
         # calc psi_0(s omega) from Table 1
-        expnt = -(scale * k - k0) ** 2 / 2. * kplus
+        expnt = -((scale * k - k0) ** 2) / 2.0 * kplus
         norm = np.sqrt(scale * k[1]) * (np.pi ** (-0.25)) * np.sqrt(n)
         daughter = norm * np.exp(expnt)
         daughter = daughter * kplus  # Heaviside step function
         # Scale-->Fourier [Sec.3h]
-        fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0 ** 2))
+        fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0**2))
         coi = fourier_factor / np.sqrt(2)  # Cone-of-influence [Sec.3g]
         dofmin = 2  # Degrees of freedom
-    elif mother == 'PAUL':  # --------------------------------  Paul
+    elif mother == "PAUL":  # --------------------------------  Paul
         if param == -1:
-            param = 4.
+            param = 4.0
         m = param
         # calc psi_0(s omega) from Table 1
         expnt = -scale * k * kplus
         norm_bottom = np.sqrt(m * np.prod(np.arange(1, (2 * m))))
-        norm = np.sqrt(scale * k[1]) * (2 ** m / norm_bottom) * np.sqrt(n)
+        norm = np.sqrt(scale * k[1]) * (2**m / norm_bottom) * np.sqrt(n)
         daughter = norm * ((scale * k) ** m) * np.exp(expnt) * kplus
         fourier_factor = 4 * np.pi / (2 * m + 1)
         coi = fourier_factor * np.sqrt(2)
         dofmin = 2
-    elif mother == 'DOG':  # --------------------------------  DOG
+    elif mother == "DOG":  # --------------------------------  DOG
         if param == -1:
-            param = 2.
+            param = 2.0
         m = param
         # calc psi_0(s omega) from Table 1
-        expnt = -(scale * k) ** 2 / 2.0
+        expnt = -((scale * k) ** 2) / 2.0
         norm = np.sqrt(scale * k[1] / gamma(m + 0.5)) * np.sqrt(n)
-        daughter = -norm * (1j ** m) * ((scale * k) ** m) * np.exp(expnt)
-        fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * m + 1))
+        daughter = -norm * (1j**m) * ((scale * k) ** m) * np.exp(expnt)
+        fourier_factor = 2 * np.pi * np.sqrt(2.0 / (2 * m + 1))
         coi = fourier_factor / np.sqrt(2)
         dofmin = 1
     else:
-        print('Mother must be one of MORLET, PAUL, DOG')
+        print("Mother must be one of MORLET, PAUL, DOG")
 
     return daughter, fourier_factor, coi, dofmin
 
@@ -206,8 +214,19 @@ def wave_bases(mother, k, scale, param):
 #          If input then this is used as the theoretical background spectrum,
 #          rather than white or red noise.
 
-def wave_signif(Y, dt, scale, sigtest=0, lag1=0.0, siglvl=0.95,
-                dof=None, mother='MORLET', param=None, gws=None):
+
+def wave_signif(
+    Y,
+    dt,
+    scale,
+    sigtest=0,
+    lag1=0.0,
+    siglvl=0.95,
+    dof=None,
+    mother="MORLET",
+    param=None,
+    gws=None,
+):
     n1 = len(np.atleast_1d(Y))
     J1 = len(scale) - 1
     dj = np.log2(scale[1] / scale[0])
@@ -218,32 +237,32 @@ def wave_signif(Y, dt, scale, sigtest=0, lag1=0.0, siglvl=0.95,
         variance = np.std(Y) ** 2
 
     # get the appropriate parameters [see Table(2)]
-    if mother == 'MORLET':  # ----------------------------------  Morlet
-        empir = ([2., -1, -1, -1])
+    if mother == "MORLET":  # ----------------------------------  Morlet
+        empir = [2.0, -1, -1, -1]
         if param is None:
-            param = 6.
-            empir[1:] = ([0.776, 2.32, 0.60])
+            param = 6.0
+            empir[1:] = [0.776, 2.32, 0.60]
         k0 = param
         # Scale-->Fourier [Sec.3h]
-        fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0 ** 2))
-    elif mother == 'PAUL':
-        empir = ([2, -1, -1, -1])
+        fourier_factor = (4 * np.pi) / (k0 + np.sqrt(2 + k0**2))
+    elif mother == "PAUL":
+        empir = [2, -1, -1, -1]
         if param is None:
             param = 4
-            empir[1:] = ([1.132, 1.17, 1.5])
+            empir[1:] = [1.132, 1.17, 1.5]
         m = param
         fourier_factor = (4 * np.pi) / (2 * m + 1)
-    elif mother == 'DOG':  # -------------------------------------Paul
-        empir = ([1., -1, -1, -1])
+    elif mother == "DOG":  # -------------------------------------Paul
+        empir = [1.0, -1, -1, -1]
         if param is None:
-            param = 2.
-            empir[1:] = ([3.541, 1.43, 1.4])
+            param = 2.0
+            empir[1:] = [3.541, 1.43, 1.4]
         elif param == 6:  # --------------------------------------DOG
-            empir[1:] = ([1.966, 1.37, 0.97])
+            empir[1:] = [1.966, 1.37, 0.97]
         m = param
-        fourier_factor = 2 * np.pi * np.sqrt(2. / (2 * m + 1))
+        fourier_factor = 2 * np.pi * np.sqrt(2.0 / (2 * m + 1))
     else:
-        print('Mother must be one of MORLET, PAUL, DOG')
+        print("Mother must be one of MORLET, PAUL, DOG")
 
     period = scale * fourier_factor
     dofmin = empir[0]  # Degrees of freedom with no smoothing
@@ -253,12 +272,13 @@ def wave_signif(Y, dt, scale, sigtest=0, lag1=0.0, siglvl=0.95,
 
     freq = dt / period  # normalized frequency
 
-    if gws is not None:   # use global-wavelet as background spectrum
+    if gws is not None:  # use global-wavelet as background spectrum
         fft_theor = gws
     else:
         # [Eqn(16)]
-        fft_theor = (1 - lag1 ** 2) / \
-            (1 - 2 * lag1 * np.cos(freq * 2 * np.pi) + lag1 ** 2)
+        fft_theor = (1 - lag1**2) / (
+            1 - 2 * lag1 * np.cos(freq * 2 * np.pi) + lag1**2
+        )
         fft_theor = variance * fft_theor  # include time-series variance
 
     signif = fft_theor
@@ -275,34 +295,35 @@ def wave_signif(Y, dt, scale, sigtest=0, lag1=0.0, siglvl=0.95,
         dof[dof < 1] = 1
         # [Eqn(23)]
         dof = dofmin * np.sqrt(1 + (dof * dt / gamma_fac / scale) ** 2)
-        dof[dof < dofmin] = dofmin   # minimum DOF is dofmin
+        dof[dof < dofmin] = dofmin  # minimum DOF is dofmin
         for a1 in range(0, J1 + 1):
             chisquare = chisquare_inv(siglvl, dof[a1]) / dof[a1]
             signif[a1] = fft_theor[a1] * chisquare
     elif sigtest == 2:  # time-averaged significance
         if len(dof) != 2:
-            print('ERROR: DOF must be set to [S1,S2],'
-                ' the range of scale-averages')
+            print("ERROR: DOF must be set to [S1,S2]," " the range of scale-averages")
         if Cdelta == -1:
-            print('ERROR: Cdelta & dj0 not defined'
-                  ' for ' + mother + ' with param = ' + str(param))
+            print(
+                "ERROR: Cdelta & dj0 not defined"
+                " for " + mother + " with param = " + str(param)
+            )
 
         s1 = dof[0]
         s2 = dof[1]
         avg = np.logical_and(scale >= 2, scale < 8)  # scales between S1 & S2
-        navg = np.sum(np.array(np.logical_and(scale >= 2, scale < 8),
-            dtype=int))
+        navg = np.sum(np.array(np.logical_and(scale >= 2, scale < 8), dtype=int))
         if navg == 0:
-            print('ERROR: No valid scales between ' + s1 + ' and ' + s2)
-        Savg = 1. / np.sum(1. / scale[avg])  # [Eqn(25)]
-        Smid = np.exp((np.log(s1) + np.log(s2)) / 2.)  # power-of-two midpoint
-        dof = (dofmin * navg * Savg / Smid) * \
-            np.sqrt(1 + (navg * dj / dj0) ** 2)  # [Eqn(28)]
+            print("ERROR: No valid scales between " + s1 + " and " + s2)
+        Savg = 1.0 / np.sum(1.0 / scale[avg])  # [Eqn(25)]
+        Smid = np.exp((np.log(s1) + np.log(s2)) / 2.0)  # power-of-two midpoint
+        dof = (dofmin * navg * Savg / Smid) * np.sqrt(
+            1 + (navg * dj / dj0) ** 2
+        )  # [Eqn(28)]
         fft_theor = Savg * np.sum(fft_theor[avg] / scale[avg])  # [Eqn(27)]
         chisquare = chisquare_inv(siglvl, dof) / dof
         signif = (dj * dt / Cdelta / Savg) * fft_theor * chisquare  # [Eqn(26)]
     else:
-        print('ERROR: sigtest must be either 0, 1, or 2')
+        print("ERROR: sigtest must be either 0, 1, or 2")
 
     return signif
 
@@ -318,10 +339,11 @@ def wave_signif(Y, dt, scale, sigtest=0, lag1=0.0, siglvl=0.95,
 
 # Uses FMIN and CHISQUARE_SOLVE
 
+
 def chisquare_inv(P, V):
 
-    if (1 - P) < 1E-4:
-        print('P must be < 0.9999')
+    if (1 - P) < 1e-4:
+        print("P must be < 0.9999")
 
     if P == 0.95 and V == 2:  # this is a no-brainer
         X = 5.9915
@@ -330,11 +352,11 @@ def chisquare_inv(P, V):
     MINN = 0.01  # hopefully this is small enough
     MAXX = 1  # actually starts at 10 (see while loop below)
     X = 1
-    TOLERANCE = 1E-4  # this should be accurate enough
+    TOLERANCE = 1e-4  # this should be accurate enough
 
     while (X + TOLERANCE) >= MAXX:  # should only need to loop thru once
-        MAXX = MAXX * 10.
-    # this calculates value for X, NORMALIZED by V
+        MAXX = MAXX * 10.0
+        # this calculates value for X, NORMALIZED by V
         X = fminbound(chisquare_solve, MINN, MAXX, args=(P, V), xtol=TOLERANCE)
         MINN = MAXX
 
@@ -345,96 +367,85 @@ def chisquare_inv(P, V):
 
 # --------------------------------------------------------------------------
 # CHISQUARE_SOLVE  Internal function used by CHISQUARE_INV
-    #
-    #   PDIFF=chisquare_solve(XGUESS,P,V)  Given XGUESS, a percentile P,
-    #   and degrees-of-freedom V, return the difference between
-    #   calculated percentile and P.
+#
+#   PDIFF=chisquare_solve(XGUESS,P,V)  Given XGUESS, a percentile P,
+#   and degrees-of-freedom V, return the difference between
+#   calculated percentile and P.
 
-    # Uses GAMMAINC
-    #
-    # Written January 1998 by C. Torrence
+# Uses GAMMAINC
+#
+# Written January 1998 by C. Torrence
 
-    # extra factor of V is necessary because X is Normalized
+# extra factor of V is necessary because X is Normalized
+
 
 def chisquare_solve(XGUESS, P, V):
 
     PGUESS = gammainc(V / 2, V * XGUESS / 2)  # incomplete Gamma function
 
-    PDIFF = np.abs(PGUESS - P)            # error in calculated P
+    PDIFF = np.abs(PGUESS - P)  # error in calculated P
 
-    TOL = 1E-4
+    TOL = 1e-4
     if PGUESS >= 1 - TOL:  # if P is very close to 1 (i.e. a bad guess)
-        PDIFF = XGUESS   # then just assign some big number like XGUESS
+        PDIFF = XGUESS  # then just assign some big number like XGUESS
 
     return PDIFF
 
-def Wavelet(sst, time, j1 = 2.3):
+
+def Wavelet(sst, time, j1=2.3):
     sst = sst - np.mean(sst)
-    variance = np.std(sst, ddof = 1) ** 2
- 
+    variance = np.std(sst, ddof=1) ** 2
+
     if 0:
         variance = 1.0
         sst = sst / np.std(sst, ddof=1)
-        
+
     n = len(sst)
     dt = time[1] - time[0]
-    pad = 1  
+    pad = 1
     dj = 0.25  # this will do 4 sub-octaves per octave
     s0 = 2 * dt  # this says start at a scale of 6 months
     j1 = j1 / dj  # this says do 7 powers-of-two with dj sub-octaves each
     lag1 = 0.72  # lag-1 autocorrelation for red noise background
 
-    mother = 'MORLET'
-    
+    mother = "MORLET"
+
     # Wavelet transform:
     wave, period, scale, coi = wavelet(sst, dt, pad, dj, s0, j1, mother)
     power = (np.abs(wave)) ** 2  # compute wavelet power spectrum
 
     # Significance levels:
     signif = wave_signif(
-        ([variance]), dt=dt, sigtest = 0, 
-        scale=scale,
-        lag1=lag1, 
-        mother=mother)
-    
-    sig95 = signif[:, np.newaxis].dot(
-        np.ones(n)[np.newaxis, :])
-    
-    sig95 = power / sig95  
-    
+        ([variance]), dt=dt, sigtest=0, scale=scale, lag1=lag1, mother=mother
+    )
+
+    sig95 = signif[:, np.newaxis].dot(np.ones(n)[np.newaxis, :])
+
+    sig95 = power / sig95
+
     return sig95, power, time, period
 
-    
+
 def plot_wavelet(ax, time, period, sig95, power):
-    
+
     power = power / np.nanmax(power)
-    
-    img = ax.contourf(
-        time, 
-        period, 
-        power, 
-        30, 
-        cmap = b.custom_cmap()
-        )
-    
+
+    img = ax.contourf(time, period, power, 30, cmap=b.custom_cmap())
+
     # print()
-    
-    ax.contour(
-        time, period, 
-        sig95, [-99, 1], 
-        colors = 'k'
-               )
-    
+
+    ax.contour(time, period, sig95, [-99, 1], colors="k")
+
     return power.max()
 
+
 def plot_reference_lines(ax):
-    
+
     for line in [265, 280]:
-        
-        ax.axvline(line, color = 'w', lw = 2)
 
-    ax.axhline(6, color = 'w', lw = 2)
+        ax.axvline(line, color="w", lw=2)
 
+    ax.axhline(6, color="w", lw=2)
 
 
 # plot_wavelet(ax, time, period, sig95, power)

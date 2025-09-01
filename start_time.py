@@ -58,23 +58,21 @@ def avg_of_roti(dn, days):
 
     df = pw.filter_doys(df, dn, days=days)
 
-    df.rename(columns={"-50": "roti"}, inplace=True)
+    df.rename(
+        columns = {"-50": "roti"}, 
+        inplace = True
+        )
 
     return df
 
 
-def test_epbs_start_time(dn, days):
-
-    epbs_start_time(dn, days, reindex=True)
-
-
 def single_plot(ax, year, col = "-50"):
-    df = roti(year, col="-50")
+    df = roti(year, col = "-50")
     df["doy"] = df.index.day_of_year
     doy = df["doy"].values
 
     sst = df[col].values
-    sig95, power, doy, period = pw.Wavelet(sst, doy, j1=3.0)
+    sig95, power, doy, period = pw.Wavelet(sst, doy, j1 = 3.0)
 
     pw.plot_wavelet_subplot(ax, doy, period, power, sig95)
 
